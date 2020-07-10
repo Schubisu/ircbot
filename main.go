@@ -58,6 +58,7 @@ func main() {
 	viper.SetDefault("channel", "#yooooooops")
 	viper.SetDefault("masters", []string{"kushal"})
 
+	password := viper.GetString("password")
 	channel := viper.GetString("channel")
 	ms := viper.GetStringSlice("masters")
 	// Now let us populate the masters map
@@ -71,10 +72,19 @@ func main() {
 	irccon.Debug = false
 	irccon.UseTLS = true
 	irccon.TLSConfig = &tls.Config{InsecureSkipVerify: true}
-	irccon.AddCallback("001", func(e *irc.Event) { irccon.Join(channel) })
-
+	irccon.AddCallback("001", func(e *irc.Event) {
+		irccon.Privmsg("NickServ", "identify " + password + "\n")
+		irccon.Join(channel)
+	})
 	irccon.AddCallback("366", func(e *irc.Event) {
 		irccon.Privmsg(channel, "Joined in.\n")
+	})
+	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
+		nick := e.Nick
+		message := e.Message()
+		if masters[nick] && message == "join" {
+			irccon.Join(channel)
+		}
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
 		channame := e.Arguments[0]
