@@ -72,17 +72,20 @@ func main() {
 	irccon.Debug = false
 	irccon.UseTLS = true
 	irccon.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	// after registration, identify with NickServ
 	irccon.AddCallback("001", func(e *irc.Event) {
 		irccon.Privmsg("NickServ", "identify " + password + "\n")
-		irccon.Join(channel)
 	})
 	irccon.AddCallback("366", func(e *irc.Event) {
 		irccon.Privmsg(channel, "Joined in.\n")
 	})
-	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
+	// After successful identification, join our channel
+	irccon.AddCallback("NOTICE", func(e *irc.Event) {
 		nick := e.Nick
 		message := e.Message()
-		if masters[nick] && message == "join" {
+		fmt.Println("Received:", message)
+		if nick == "NickServ" &&
+		   strings.Contains(message, "You are now identified") {
 			irccon.Join(channel)
 		}
 	})
